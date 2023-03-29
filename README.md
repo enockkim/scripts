@@ -3,8 +3,7 @@ Scripts for deploying servers
 
 # Install mysql on linux
 
-# Ref
-https://www.digitalocean.com/community/tutorials/how-to-install-the-latest-mysql-on-debian-10
+Ref: https://www.digitalocean.com/community/tutorials/how-to-install-the-latest-mysql-on-debian-10
 
 sudo apt update
 sudo apt install gnupg
@@ -19,8 +18,7 @@ mysql_secure_installation
 
 # Create remote user
 
-# Ref
-https://stackoverflow.com/questions/16287559/mysql-adding-user-for-remote-access
+Ref: https://stackoverflow.com/questions/16287559/mysql-adding-user-for-remote-access
 
 CREATE USER 'remote'@'localhost' IDENTIFIED BY 'mypass';
 CREATE USER 'remote'@'%' IDENTIFIED BY 'mypass';
@@ -33,5 +31,4 @@ FLUSH PRIVILEGES;
 
 # Subdomains Nginx
 
-# Ref 
-https://www.youtube.com/watch?v=gsSGDEexBl8
+Ref: https://www.youtube.com/watch?v=gsSGDEexBl8
