@@ -1,0 +1,5 @@
+sudo docker run -d --name keycloak-prod -p 8086:8080 -e KEYCLOAK_ADMIN=admin_prod -e K
+EYCLOAK_ADMIN_PASSWORD=admin_prod -e KC_HTTP_ENABLED=true -e KC_PROXY=edge -e KC_HOSTNAME=https://keycloak-prod.prema.co
+.ke -e KC_HOSTNAME_STRICT=false -e KC_HOSTNAME_STRICT_HTTPS=false quay.io/keycloak/keycloak:25.0.5 start
+
+NOTE: KC_HOSTNAME variable required to prevent Mixed Content error ie trying to query internally with http instead of https
