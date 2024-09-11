@@ -1,5 +1,27 @@
-sudo docker run -d --name keycloak-prod -p 8086:8080 -e KEYCLOAK_ADMIN=admin_prod -e K
-EYCLOAK_ADMIN_PASSWORD=admin_prod -e KC_HTTP_ENABLED=true -e KC_PROXY=edge -e KC_HOSTNAME=https://keycloak-prod.prema.co
-.ke -e KC_HOSTNAME_STRICT=false -e KC_HOSTNAME_STRICT_HTTPS=false quay.io/keycloak/keycloak:25.0.5 start
+sudo docker run -d --name keycloak-dev -p 8085:8080 -e KEYCLOAK_ADMIN=admin_dev -e KEYCLOAK_ADMIN_PASSWORD=admin_dev -e KC_HTTP_ENABLED=true -e KC_PROXY=edge -e KC_HOSTNAME_STRICT=false -e KC_HOSTNAME_STRICT_HTTPS=false quay.io/keycloak/keycloak:25.0.5 start-dev
 
 NOTE: KC_HOSTNAME variable required to prevent Mixed Content error ie trying to query internally with http instead of https
+
+nginx conf
+
+server {
+#    listen 443 ssl;
+
+#    listen [::]:443 ssl;
+#    http2  on;
+    listen 80;
+
+    server_name keycloak-dev.prema.co.ke;
+    ssl_certificate /etc/letsencrypt/live/keycloak.prema.co.ke/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/keycloak.prema.co.ke/privkey.pem; # managed by Certbot
+
+
+    location / {
+        proxy_pass http://127.0.0.1:8085;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;  #note this
+    }
+
+}
