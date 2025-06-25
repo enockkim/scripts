@@ -21,6 +21,7 @@ sudo apt install -y python3-pip
 
 echo "Installing whisper..."
 pip3 install -U openai-whisper
+pip3 install reportlab
 
 echo "Installing ffmpeg..."
 sudo apt update && sudo apt install -y ffmpeg
