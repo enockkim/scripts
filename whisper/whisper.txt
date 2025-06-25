@@ -3,3 +3,31 @@ pip install -U openai-whisper
 sudo apt update && sudo apt install ffmpeg
 
 python transcribe_sms.py --audio sample.mp3
+
+
+
+#!/bin/bash
+
+set -e  # Exit on any error
+
+echo "Updating and upgrading system..."
+sudo apt update && sudo apt upgrade -y
+
+echo "Creating 'minutes' directory..."
+mkdir -p ~/minutes
+
+echo "Installing Python pip (if not already installed)..."
+sudo apt install -y python3-pip
+
+echo "Installing whisper..."
+pip3 install -U openai-whisper
+
+echo "Installing ffmpeg..."
+sudo apt update && sudo apt install -y ffmpeg
+
+echo "Setup complete."
+
+
+
+chmod +x setup_minutes.sh
+./setup_minutes.sh
