@@ -5,6 +5,10 @@ import argparse
 import os
 import sys
 from datetime import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
 
 # === SMS CONFIG ===
 API_URL = "https://your-api-endpoint.com/send"  # Replace with your endpoint
@@ -12,16 +16,19 @@ API_TOKEN = "your_api_token_here"
 CONTACTS = ["2547XXXXXXXX", "2547YYYYYYYY"]  # Replace with real phone numbers
 SENDER_ID = "LIFEWAY"
 
+
 # === Parse CLI arguments ===
 parser = argparse.ArgumentParser(description="Transcribe audio and send SMS summary.")
 parser.add_argument("--audio", required=True, help="Path to the audio file")
 parser.add_argument("--model", default="large-v2", help="Whisper model to use (tiny, base, small, medium, large, large-v2)")
+parser.add_argument("--format", default="pdf", choices=["txt", "pdf", "both"], help="Output format (txt, pdf, or both)")
 parser.add_argument("--language", default=None, help="Language code (e.g., 'en' for English)")
 args = parser.parse_args()
 
 audio_path = args.audio
 model_size = args.model
 language = args.language
+output_format = args.format
 
 # === Validate file ===
 if not os.path.exists(audio_path):
@@ -74,20 +81,117 @@ except Exception as e:
     print(f"[!] Transcription failed: {str(e)}")
     sys.exit(1)
 
-# === Save to .txt file ===
+# === Save transcript ===
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 basename = os.path.splitext(os.path.basename(audio_path))[0]
-output_filename = f"{basename}_transcript_{timestamp}.txt"
 
-with open(output_filename, "w", encoding="utf-8") as f:
-    f.write(f"Transcription of: {audio_path}\n")
-    f.write(f"Model used: {model_size}\n")
-    f.write(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    f.write(f"File size: {file_size:.2f} MB\n")
-    f.write("=" * 50 + "\n\n")
-    f.write(transcribed_text)
+def save_as_txt(filename, content):
+    """Save transcript as text file"""
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(f"Transcription of: {audio_path}\n")
+        f.write(f"Model used: {model_size}\n")
+        f.write(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"File size: {file_size:.2f} MB\n")
+        f.write("=" * 50 + "\n\n")
+        f.write(content)
+    print(f"[+] Text transcript saved to: {filename}")
 
-print(f"[+] Transcript saved to: {output_filename}")
+def save_as_pdf(filename, content):
+    """Save transcript as PDF file"""
+    try:
+        # Create PDF document
+        doc = SimpleDocTemplate(filename, pagesize=letter)
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=30,
+        )
+        
+        header_style = ParagraphStyle(
+            'CustomHeader',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor='gray',
+            spaceAfter=20,
+        )
+        
+        body_style = ParagraphStyle(
+            'CustomBody',
+            parent=styles['Normal'],
+            fontSize=11,
+            leading=14,
+            spaceAfter=12,
+            leftIndent=0,
+            rightIndent=0,
+        )
+        
+        # Build PDF content
+        story = []
+        
+        # Title
+        story.append(Paragraph("Audio Transcription", title_style))
+        story.append(Spacer(1, 12))
+        
+        # Header info
+        header_info = f"""
+        <b>File:</b> {os.path.basename(audio_path)}<br/>
+        <b>Model:</b> {model_size}<br/>
+        <b>Date:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}<br/>
+        <b>File Size:</b> {file_size:.2f} MB<br/>
+        <b>Transcript Length:</b> {len(content)} characters
+        """
+        story.append(Paragraph(header_info, header_style))
+        story.append(Spacer(1, 20))
+        
+        # Transcript content - split into paragraphs for better formatting
+        paragraphs = content.split('\n\n')
+        if len(paragraphs) == 1:  # If no double newlines, split by sentences
+            sentences = content.split('. ')
+            # Group sentences into paragraphs of ~5 sentences each
+            paragraphs = []
+            for i in range(0, len(sentences), 5):
+                paragraph = '. '.join(sentences[i:i+5])
+                if not paragraph.endswith('.') and i+5 < len(sentences):
+                    paragraph += '.'
+                paragraphs.append(paragraph)
+        
+        for para in paragraphs:
+            if para.strip():  # Skip empty paragraphs
+                # Clean up the text for PDF
+                clean_para = para.strip().replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                story.append(Paragraph(clean_para, body_style))
+                story.append(Spacer(1, 6))
+        
+        # Build PDF
+        doc.build(story)
+        print(f"[+] PDF transcript saved to: {filename}")
+        
+    except Exception as e:
+        print(f"[!] Failed to create PDF: {str(e)}")
+        print("[*] Falling back to text format...")
+        txt_filename = filename.replace('.pdf', '.txt')
+        save_as_txt(txt_filename, content)
+
+# Save in requested format(s)
+if output_format in ["txt", "both"]:
+    txt_filename = f"{basename}_transcript_{timestamp}.txt"
+    save_as_txt(txt_filename, transcribed_text)
+
+if output_format in ["pdf", "both"]:
+    pdf_filename = f"{basename}_transcript_{timestamp}.pdf"
+    save_as_pdf(pdf_filename, transcribed_text)
+
+# Set the filename for SMS notification
+if output_format == "pdf":
+    output_filename = f"{basename}_transcript_{timestamp}.pdf"
+elif output_format == "txt":
+    output_filename = f"{basename}_transcript_{timestamp}.txt"
+else:  # both
+    output_filename = f"{basename}_transcript_{timestamp}.pdf & .txt"
 
 # === Send SMS ===
 def send_sms(contact, message):
